@@ -58,6 +58,9 @@ jobs:
         with:
           name: java-app-${{ github.run_number }}
 
+      - name: Ls to check artifact
+        run: ls -l
+
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         run: echo "Upload to az app service with publish profile"
@@ -72,9 +75,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: java-app-${{ github.run_number }}
-          path: /
 
       - name: Do ls to check the Download artifact
-        run: ls /
+        run: | 
+          ls -l
+          ls -l /
       # - name: Delete Previous builds
       #   uses
