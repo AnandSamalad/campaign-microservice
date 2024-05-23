@@ -22,6 +22,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: dev
 
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +40,9 @@ jobs:
       #     server-password: ${{ secrets.GITHUB_TOKEN }}
       #     overwrite-settings: true
       - name: Build with Maven
-        run: echo "mvn clean install"
+        run: |
+          echo "mvn clean install"
+          echo "ng build --configuration=${{ vars.env }}"  
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -59,8 +62,11 @@ jobs:
           name: java-app-${{ github.run_number }}
 
       - name: Ls to check artifact
-        run: ls -l
-
+        run: | 
+          ls -l
+          pwd
+          echo ${{ vars.VARIABLE }}
+          echo ${{ secrets.SECRET }}
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         run: echo "Upload to az app service with publish profile"
@@ -79,6 +85,6 @@ jobs:
       - name: Do ls to check the Download artifact
         run: | 
           ls -l
-          ls -l /
+          pwd
       # - name: Delete Previous builds
       #   uses
