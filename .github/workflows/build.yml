@@ -26,18 +26,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Java version
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: 'adopt'  # or 'zulu', 'openjdk', etc.
-          cache: maven
-          java-package: jdk
-          check-latest: false
-          server-id: github
-          server-username: ${{ secrets.GITHUB_ACTOR }}
-          server-password: ${{ secrets.GITHUB_TOKEN }}
-          overwrite-settings: true
+      # - name: Set up Java version
+      #   uses: actions/setup-java@v4
+      #   with:
+      #     java-version: 17
+      #     distribution: 'adopt'  # or 'zulu', 'openjdk', etc.
+      #     cache: maven
+      #     java-package: jdk
+      #     check-latest: false
+      #     server-id: github
+      #     server-username: ${{ secrets.GITHUB_ACTOR }}
+      #     server-password: ${{ secrets.GITHUB_TOKEN }}
+      #     overwrite-settings: true
       - name: Build with Maven
         run: echo "mvn clean install"
 
