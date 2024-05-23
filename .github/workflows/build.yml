@@ -1,61 +1,82 @@
-name: Build
+name: Build and deploy JAR app to Azure Web App
 
+env:
+  AZURE_WEBAPP_NAME: ctam-dev-b001-webapp-service   # set this to your application's name
+  # JAVA_VERSION: '17'                  # set this to the Java version to use
+# Trigger test
 on:
   push:
     branches:
-      - 'master'
-
-# env:
-#   AZURE_WEBAPP_NAME: my-app-name    # set this to your application's name
-#   AZURE_WEBAPP_PACKAGE_PATH: '.'      # set this to the path to your web app project, defaults to the repository root
-#   DOTNET_VERSION: '6.0.x'           # set this to the dot net version to use
-
+      - devops
+  pull_request:
+    branches:
+      - devops
+  workflow_dispatch:
+  #   inputs:
+  #     artifact-number:
+  #       description: Specify the job run number as artifact number
+  #       required: true
+  #       type: string
+      
+    
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
-      # Checkout the repo
       - uses: actions/checkout@v4
-      
-      # Setup .NET Core SDK
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 6.0 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v1
-      
-      # Run dotnet build and publish
-      - name: dotnet build and publish
-        run: |
-          dotnet restore
-          dotnet build --configuration Release
-          dotnet publish "Test2.API/Test.API.csproj" -c Release --property:PublishDir='${{ github.workspace }}\app' 
-          ls ${{ github.workspace }}\app
 
-      - name : Echo Build Details
-        run: |
-          touch ${{ github.workspace }}/version.txt
-          echo ${{ github.run_id }} >> ${{ github.workspace }}/version.txt
-          
-      # - name: Zip MDM Build artifacts
-      #   run: |
-      #     cd '${{ github.workspace }}/app'
-      #     Compress-Archive -Path ./* -DestinationPath "${{ github.workspace }}\publish.zip" -Force 
-      - name: zip publish folder
+      - name: Set up Java version
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'adopt'  # or 'zulu', 'openjdk', etc.
+          cache: maven
+          java-package: jdk
+          check-latest: false
+          server-id: github
+          server-username: ${{ secrets.GITHUB_ACTOR }}
+          server-password: ${{ secrets.GITHUB_TOKEN }}
+          overwrite-settings: true
+      - name: Build with Maven
+        run: mvn clean install
+
+      - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: Artifacts
-          path: | 
-            ${{ github.workspace }}/app
-            ${{ github.workspace }}/version.txt
-          compression-level: 9
-          
-      # # Deploy to Azure Web apps
-      # - name: 'Run Azure webapp deploy action using publish profile credentials'
-      #   uses: azure/webapps-deploy@v3
-      #   with: 
-      #     app-name: ${{ env.AZURE_WEBAPP_NAME }} # Replace with your app name
-      #     publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE  }} # Define secret variable in repository settings as per action documentation
-      #     package: '${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/myapp'
+          name: java-app-${{ github.run_number }}
+          path: '${{ github.workspace }}/target/*.jar'
+
+  deploy-dev:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: dev
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: java-app-${{ github.run_number }}
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@85270a1854658d167ab239bce43949edb336fa7c
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: <publishData><publishProfile profileName="ctam-dev-b001-webapp-service - Web Deploy" publishMethod="MSDeploy" publishUrl="ctam-dev-b001-webapp-service.scm.azurewebsites.net:443" msdeploySite="ctam-dev-b001-webapp-service" userName="$ctam-dev-b001-webapp-service" userPWD="oXzlcmmporeQBG2lqyZgRdqnXe9gnvNnrfgf1v7M6eHc0XqdoZl75ilsp2wX" destinationAppUrl="https://ctam-dev-b001-webapp-service.azurewebsites.net" SQLServerDBConnectionString="" mySQLDBConnectionString="" hostingProviderForumLink="" controlPanelLink="https://portal.azure.com" webSystem="WebSites"><databases /></publishProfile><publishProfile profileName="ctam-dev-b001-webapp-service - FTP" publishMethod="FTP" publishUrl="ftp://waws-prod-blu-551.ftp.azurewebsites.windows.net/site/wwwroot" ftpPassiveMode="True" userName="ctam-dev-b001-webapp-service\$ctam-dev-b001-webapp-service" userPWD="oXzlcmmporeQBG2lqyZgRdqnXe9gnvNnrfgf1v7M6eHc0XqdoZl75ilsp2wX" destinationAppUrl="https://ctam-dev-b001-webapp-service.azurewebsites.net" SQLServerDBConnectionString="" mySQLDBConnectionString="" hostingProviderForumLink="" controlPanelLink="https://portal.azure.com" webSystem="WebSites"><databases /></publishProfile><publishProfile profileName="ctam-dev-b001-webapp-service - Zip Deploy" publishMethod="ZipDeploy" publishUrl="ctam-dev-b001-webapp-service.scm.azurewebsites.net:443" userName="$ctam-dev-b001-webapp-service" userPWD="oXzlcmmporeQBG2lqyZgRdqnXe9gnvNnrfgf1v7M6eHc0XqdoZl75ilsp2wX" destinationAppUrl="https://ctam-dev-b001-webapp-service.azurewebsites.net" SQLServerDBConnectionString="" mySQLDBConnectionString="" hostingProviderForumLink="" controlPanelLink="https://portal.azure.com" webSystem="WebSites"><databases /></publishProfile></publishData>
+          package: '*.jar'
+
+  deploy-qa:
+    runs-on: self-hosted
+    needs: build
+    environment: qa
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: java-app-${{ github.run_number }}
+          path: ${{ env.var_name}}
+
+      - name: Delete Previous builds
+        uses
