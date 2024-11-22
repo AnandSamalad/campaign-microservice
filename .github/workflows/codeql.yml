@@ -95,7 +95,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: codeql-sarif-${{ matrix.language }}
-        path: .github/codeql-analysis/codeql-sarif.sarif
+        path: /home/runner/work/campaign-microservice/results/csharp.sarif
 
 
     
